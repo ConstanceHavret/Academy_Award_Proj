@@ -80,10 +80,30 @@ TreeAwCategs
 
 best.pict <- filter(database,Award=="Best Picture")
 
+
+best.pict[is.na(best.pict)] <- 0
+
+sum(best.pict$Winner)
+
+colnames(best.pict)[5] <- "movie_title"
+
+df <- left_join(best.pict, meta)
+
 ```
 
+## Country nominated
+
+```{r}
+df %>% group_by(country) %>% count() %>% arrange(desc(n))
 
 
+```
+
+## Budget
+
+```{r}
+
+```
 
 
 
