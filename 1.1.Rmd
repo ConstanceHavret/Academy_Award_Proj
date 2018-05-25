@@ -1,0 +1,149 @@
+---
+title: '1.1'
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(ggplot2) # Data visualization
+library(readr) # CSV file I/O, e.g. the read_csv function
+library(dplyr)
+library(data.table)
+library(stringr)
+library(splitstackshape)
+library(ggrepel)
+library(highcharter)
+library(sqldf)
+```
+
+
+
+```{r}
+database <- read_csv("database.csv")
+meta <- read_csv("movie_metadata.csv")
+credits <- read_csv("tmdb_5000_credits.csv")
+movies <- read_csv("tmdb_5000_movies.csv")
+```
+
+## remove trailing spaces, special characters, duplicates
+
+```{r}
+mytrimfunction <- function (x) gsub("^\\s+|\\s+$", "", x)
+meta$movie_title <- mytrimfunction(meta$movie_title)
+meta$movie_title <- mytrimfunction(gsub("Â", "", meta$movie_title))
+meta <- meta[!duplicated(meta$movie_title),]
+meta$movie_title <- str_trim(meta$movie_title)
+```
+
+## changing years from 1927/1928 to 1927
+```{r}
+AwYear = data.table(database$Year)
+AwYear = cSplit(as.data.table(AwYear$V1), "V1", "/") 
+names(AwYear)[1] <- "Year"
+AwYear$V1_2 <- NULL
+database$Year = AwYear$Year
+```
+
+
+## plot number of nomination by year (attention to regulation after 1945 min 99 max 130)
+
+```{r}
+tyears <- database %>% group_by(Year) %>% summarise(Total = n()) %>% arrange(desc(Total))
+
+TyrNomPlot =  ggplot(tyears)+ geom_point(aes(Year, Total), size = 4, color = 'grey') +
+                geom_label_repel(aes(Year, Total, fill = factor(Total), label = Total),
+                  fontface = 'bold', color = 'white', box.padding = unit(0.35, "lines"),
+                  point.padding = unit(0.5, "lines"),segment.color = 'grey50')+
+                ggtitle("Total number of nominations by year")+ labs(x="Year",y="Total Nominations") +
+                scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+                scale_y_continuous(breaks = scales::pretty_breaks(n = 20)) +
+                labs(fill = "Nominations") + theme(legend.title = element_text(face = "bold", size = 14)) + 
+                theme(axis.text=element_text(size=14), axis.title=element_text(size=20,face="bold"))
+TyrNomPlot
+```
+
+```{r}
+NomNWins <- database %>% group_by(Award) %>% summarise(n = n()) %>%  arrange(-n) %>% glimpse() 
+
+TreeAwCategs = hchart(NomNWins, "treemap", hcaes(x = Award, value = n, color = n))%>%
+      hc_add_theme(hc_theme_google()) %>% hc_title(text = "Academy award categories and total nominations") %>%
+      hc_credits(enabled = TRUE, text = "Sources: Academy of Motion Picture Arts and Sciences", 
+                 style = list(fontSize = "12px"))
+
+TreeAwCategs
+```
+
+
+
+```{r}
+
+best.pict <- filter(database,Award=="Best Picture")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
