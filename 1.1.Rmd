@@ -15,6 +15,8 @@ library(splitstackshape)
 library(ggrepel)
 library(highcharter)
 library(sqldf)
+library(formattable)
+library(gtools)
 ```
 
 
@@ -74,7 +76,7 @@ TreeAwCategs = hchart(NomNWins, "treemap", hcaes(x = Award, value = n, color = n
 TreeAwCategs
 ```
 
-
+## select database
 
 ```{r}
 
@@ -87,43 +89,245 @@ sum(best.pict$Winner)
 
 colnames(best.pict)[5] <- "movie_title"
 
-df <- left_join(best.pict, meta)
+
+df <- inner_join(best.pict, meta)
 
 ```
 
 ## Country nominated
 
 ```{r}
-df %>% group_by(country) %>% count() %>% arrange(desc(n))
+c <- df %>% group_by(country) %>% count() %>% arrange(desc(n))
 
+TreeAwCategs = hchart(c, "treemap", hcaes(x = country, value = n, color = n))%>%
+      hc_add_theme(hc_theme_google()) %>% hc_title(text = "Academy award categories and total nominations") %>%
+      hc_credits(enabled = TRUE, text = "Sources: Academy of Motion Picture Arts and Sciences", 
+                 style = list(fontSize = "12px"))
 
+TreeAwCategs
 ```
 
-## Budget
+## duration
 
 ```{r}
 
+df %>% group_by(duration) %>% count() %>% arrange(desc(n))
+
+df %>% group_by(Winner) %>%
+  ggplot(aes(x = as.factor(Winner) , y = duration)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.3, hjust = 1), plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "Duration for winner or nominee",  x = "1 = Winner 0 = Nominee", y = "Duration") +
+  scale_color_gradient(low = "green", high = "red")
+
+```
+
+## budget
+
+```{r}
+
+df %>% group_by(budget) %>% count() %>% arrange(desc(n))
+
+df %>% group_by(Winner) %>%
+  ggplot(aes(x = as.factor(Winner) , y = budget)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.3, hjust = 1), plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "Budget for winner or nominee",  x = "1 = Winner 0 = Nominee", y = "Budget") +
+  scale_color_gradient(low = "green", high = "red")
+```
+
+## PG rating
+
+```{r}
+
+df %>% group_by(content_rating) %>% count() %>% arrange(desc(n))
+
+```
+
+
+## number of nommination by genre
+
+```{r}
+
+tmp1 <- df
+
+genrestmp <- tmp1[tmp1$genres != "", ]
+genres <- c()
+i <- 1
+for (genr in genrestmp$genres){
+    kw <- strsplit(genr, "[|]")
+    if (length(kw) != 0){
+        for (word in kw[[1]]){
+            if (!(word %in% genres)){
+                genres[i] <- word
+                i = i + 1
+            }
+        }
+    }
+}
+
+oscarweight <- rep(0, length(genres))
+genresoscars <- data.frame(genres, oscarweight)
+rm(i)
+for(i in 1:nrow(genresoscars)) {
+    irow <- genresoscars[i,]
+
+    for(j in 1:nrow(tmp1)) {
+        jrow <- tmp1[j,]
+
+        if (grepl(irow$genres, jrow$genres)) {
+            genresoscars[i,]$oscarweight = genresoscars[i,]$oscarweight + 1
+        }
+    }
+}
+genresoscars <- genresoscars %>% select(genres, oscarweight) %>% arrange(desc(oscarweight))
+genresoscars$ID <- seq.int(nrow(genresoscars))
+genresoscars <- genresoscars[c(3, 1, 2)]
+setnames(genresoscars, old=c("ID", "genres", "oscarweight"), new=c("Sl. No.", "Genres", "Oscar Weightage"))
+genresoscars %>% formattable(list("Oscar Weightage" = color_bar("lightblue")), align = 'l')
+
+
+## open the table in new window
+
+
 ```
 
 
 
+## number of nomination by key words 
+
+
+```{r}
+tmp1 <- df
+
+keywordstmp <- tmp1[tmp1$genres != "", ]
+keywords <- c()
+i <- 1
+for (keyw in genrestmp$plot_keywords){
+    kw <- strsplit(keyw, "[|]")
+    if (length(kw) != 0){
+        for (word in kw[[1]]){
+            if (!(word %in% keywords)){
+                keywords[i] <- word
+                i = i + 1
+            }
+        }
+    }
+}
+oscarweight <- rep(0, length(keywords))
+keywordsoscars <- data.frame(keywords, oscarweight)
+rm(i)
+
+for(i in 1:nrow(keywordsoscars)) {
+    irow <- keywordsoscars[i,]
+
+    for(j in 1:nrow(tmp1)) {
+        jrow <- tmp1[j,]
+
+        if (grepl(irow$keywords, jrow$plot_keywords)) {
+            keywordsoscars[i,]$oscarweight = keywordsoscars[i,]$oscarweight + 1
+        }
+    }
+}
+keywordsoscars <- keywordsoscars %>% select(keywords, oscarweight) %>% arrange(desc(oscarweight))
+keywordsoscars$ID <- seq.int(nrow(keywordsoscars))
+keywordsoscars <- keywordsoscars[c(3, 1, 2)]
+setnames(keywordsoscars, old=c("ID", "keywords", "oscarweight"), new=c("Sl. No.", "Keywords", "Oscar Weightage"))
+keywordsoscars %>% formattable(list("Oscar Weightage" = color_bar("lightblue")), align = 'l')
+```
 
 
 
+## now bubble chart of the combination of keyword and genre
+
+```{r}
+keywordsoscars$oscarweight = 0
+topgenres <- genresoscars[1:12,]
+topkeywords <- keywordsoscars[1:15,]
+topGK = merge(x = topgenres, y = topkeywords, by = NULL)
+topGK$"Sl. No..x" <- NULL
+topGK$"Sl. No..y" <- NULL
+topGK$"Oscar Weightage.x" <- NULL
+topGK$"Oscar Weightage.y" <- NULL
+weight <- rep(0, dim(topGK)[1])
+count <- rep(0, dim(topGK)[1])
+topGK <- data.frame(topGK, weight, count)
+for(i in 1:nrow(topGK)) {
+    irow <- topGK[i,]
+
+    for(j in 1:nrow(tmp1)) {
+        jrow <- tmp1[j,]
+
+        if (grepl(irow$Genres, jrow$genres) & grepl(irow$Keywords, jrow$plot_keywords)) {
+            topGK[i,]$weight = topGK[i,]$weight + 1
+            topGK[i,]$count = topGK[i,]$count + 1
+        }
+    }
+}
+topGK <- topGK %>% select(Genres, Keywords, weight, count) %>% arrange(desc(weight))
+topGK$ID <- seq.int(nrow(topGK))
+topGK <- topGK[c(5, 1, 2, 3, 4)]
+setnames(topGK, old=c("ID", "weight", "count"), new=c("SlNo", "Weightage", "Count"))
+scplot <- ggplot(topGK, aes(x = Keywords, y = Genres, size = Weightage, fill = Count)) +
+        geom_point(shape = 21)
+scplot
+```
 
 
 
+# Now with use machine learning to predict nominees
+
+## first use new data base and make a train and a test set
+
+```{r}
+df <- df %>% mutate(nominee = 1)
+
+## add now the same number of row with movie that were not nominated so we have an homogenous dataset to make the train and test
+
+notindf <- subset(meta, !(movie_title %in% df$movie_title))
+
+notindf <- notindf[sample(nrow(notindf), 204), ]
 
 
 
+newdf <- bind_rows(df, notindf)
+
+newdf$nominee[is.na(newdf$nominee)] <- 0
+
+train <- newdf[sample(nrow(newdf), 326), ]
+
+test <- subset(newdf, !(movie_title %in% train$movie_title))
+
+```
 
 
+## now we can train test and score our model 
 
+## start with a logistice regression since we want to now if movie is nominated or not. 
 
+```{r}
 
+## maybe put genre and key word in one col for each word
 
+## var to add : genres, plot_keywords,director_name,actor_2_name,actor_3_name,actor_1_name, country,content_rating
 
+model <- glm(nominee ~ duration+budget,family=binomial(link='logit'),data=train)
 
+summary(model)
+
+anova(model, test="Chisq")
+
+library(pscl)
+pR2(model)
+
+## now test the model 
+
+fitted.results <- predict(model,newdata=test,type='response')
+fitted.results <- ifelse(fitted.results > 0.5,1,0)
+
+misClasificError <- mean(fitted.results != test$nominee)
+print(paste('Accuracy',1-misClasificError))
+```
 
 
 
