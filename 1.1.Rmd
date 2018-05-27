@@ -294,6 +294,16 @@ newdf <- bind_rows(df, notindf)
 
 newdf$nominee[is.na(newdf$nominee)] <- 0
 
+
+
+library(Amelia)
+missmap(newdf, main = "Missing values vs observed")
+
+
+newdf$budget[is.na(newdf$budget)] <- mean(newdf$budget,na.rm=T)
+
+missmap(newdf, main = "Missing values vs observed")
+
 train <- newdf[sample(nrow(newdf), 326), ]
 
 test <- subset(newdf, !(movie_title %in% train$movie_title))
@@ -311,7 +321,7 @@ test <- subset(newdf, !(movie_title %in% train$movie_title))
 
 ## var to add : genres, plot_keywords,director_name,actor_2_name,actor_3_name,actor_1_name, country,content_rating
 
-model <- glm(nominee ~ duration+budget,family=binomial(link='logit'),data=train)
+model <- glm(nominee ~ duration+budget+country,family=binomial(link='logit'),data=train)
 
 summary(model)
 
