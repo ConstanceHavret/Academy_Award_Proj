@@ -17,6 +17,8 @@ library(highcharter)
 library(sqldf)
 library(formattable)
 library(gtools)
+library(rpart)
+library(flexclust)
 ```
 
 
@@ -286,7 +288,9 @@ df <- df %>% mutate(nominee = 1)
 
 notindf <- subset(meta, !(movie_title %in% df$movie_title))
 
-notindf <- notindf[sample(nrow(notindf), 204), ]
+notindf <- notindf[complete.cases(notindf),]
+
+notindf <- notindf[sample(nrow(notindf), 800), ]
 
 
 
@@ -302,9 +306,11 @@ missmap(newdf, main = "Missing values vs observed")
 
 newdf$budget[is.na(newdf$budget)] <- mean(newdf$budget,na.rm=T)
 
+newdf <- newdf[complete.cases(newdf$gross),]
+
 missmap(newdf, main = "Missing values vs observed")
 
-train <- newdf[sample(nrow(newdf), 326), ]
+train <- newdf[sample(nrow(newdf), 800), ]
 
 test <- subset(newdf, !(movie_title %in% train$movie_title))
 
@@ -320,8 +326,10 @@ test <- subset(newdf, !(movie_title %in% train$movie_title))
 ## maybe put genre and key word in one col for each word
 
 ## var to add : genres, plot_keywords,director_name,actor_2_name,actor_3_name,actor_1_name, country,content_rating
+## add  : gross - budget , imdb_score, movie_facebook_likes, cast_total_facebook_likes
+model <- glm(nominee ~ duration+gross+budget+imdb_score+movie_facebook_likes+cast_total_facebook_likes,family=binomial(link='logit'),data=train)
 
-model <- glm(nominee ~ duration+budget,family=binomial(link='logit'),data=train)
+
 
 summary(model)
 
@@ -335,25 +343,187 @@ pR2(model)
 fitted.results <- predict(model,newdata=test,type='response')
 fitted.results <- ifelse(fitted.results > 0.5,1,0)
 
+
+
+
 misClasificError <- mean(fitted.results != test$nominee)
+
 print(paste('Accuracy',1-misClasificError))
+
+
+
+model2 <- step(model)
+
+summary(model2)
+
+anova(model2, test="Chisq")
+
+fitted.results2 <- predict(model2,newdata=test,type='response')
+fitted.results2 <- ifelse(fitted.results2 > 0.5,1,0)
+misClasificError2 <- mean(fitted.results2 != test$nominee)
+print(paste('Accuracy',1-misClasificError))
+print(paste('Accuracy2',1-misClasificError2))
+```
+
+
+## Classification tree
+
+
+
+```{r}
+fit <- rpart(nominee ~ duration+gross+budget+imdb_score+movie_facebook_likes+cast_total_facebook_likes,
+  	method="class", data=train)
+printcp(fit)
+plotcp(fit)
+#summary(fit)
+
+plot(fit, uniform=TRUE, 
+  	main="Classification Tree for Awards Nominees")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
+
+
+# prune the tree 
+pfit<- prune(fit, cp=   fit$cptable[which.min(fit$cptable[,"xerror"]),"CP"])
+
+# plot the pruned tree 
+plot(pfit, uniform=TRUE, 
+  	main="Pruned Classification Tree for Awards Nominees")
+text(pfit, use.n=TRUE, all=TRUE, cex=.8)
+
+
+pred <- predict(fit, newdata = test, type= "class")
+pred2 <- predict(pfit, newdata = test, type= "class")
+
+
+misClasificError <- mean(pred != test$nominee)
+misClasificError2 <- mean(pred2 != test$nominee)
+
+print(paste('Accuracy',1-misClasificError))
+print(paste('Accuracy2',1-misClasificError2))
+```
+
+## K-mean method
+
+```{r}
+
+
+cl = kcca(train$nominee, k=2, kccaFamily("kmeans"))
+
+cl
+
+cl1 = kcca(select(train, duration,gross,budget,imdb_score,movie_facebook_likes,cast_total_facebook_likes ), k=2, kccaFamily("kmeans"))
+cl1
+
+
+
+pred_train <- predict(cl1)
+pred_test <- predict(cl1, newdata=select(test, duration,gross,budget,imdb_score,movie_facebook_likes,cast_total_facebook_likes ))
+
+
+image(cl1)
+points(select(train, duration,gross,budget,imdb_score,movie_facebook_likes,cast_total_facebook_likes ), col=pred_train, pch=19, cex=0.3)
+points(select(test, duration,gross,budget,imdb_score,movie_facebook_likes,cast_total_facebook_likes ), col=pred_test, pch=22, bg="orange")
 ```
 
 
 
 
+## test for removing non existing factor between test and train (if appears in test then set to NA)
 
 
+```{r}
+remove_missing_levels <- function(fit, test_data) {
+  library(magrittr)
+  
+  # https://stackoverflow.com/a/39495480/4185785
+  
+  # drop empty factor levels in test data
+  test_data %>%
+    droplevels() %>%
+    as.data.frame() -> test_data
+  
+  # 'fit' object structure of 'lm' and 'glmmPQL' is different so we need to
+  # account for it
+  if (any(class(fit) == "glmmPQL")) {
+    # Obtain factor predictors in the model and their levels
+    factors <- (gsub("[-^0-9]|as.factor|\\(|\\)", "",
+                     names(unlist(fit$contrasts))))
+    # do nothing if no factors are present
+    if (length(factors) == 0) {
+      return(test_data)
+    }
+    
+    map(fit$contrasts, function(x) names(unmatrix(x))) %>%
+      unlist() -> factor_levels
+    factor_levels %>% str_split(":", simplify = TRUE) %>%
+      extract(, 1) -> factor_levels
+    
+    model_factors <- as.data.frame(cbind(factors, factor_levels))
+  } else {
+    # Obtain factor predictors in the model and their levels
+    factors <- (gsub("[-^0-9]|as.factor|\\(|\\)", "",
+                     names(unlist(fit$xlevels))))
+    # do nothing if no factors are present
+    if (length(factors) == 0) {
+      return(test_data)
+    }
+    
+    factor_levels <- unname(unlist(fit$xlevels))
+    model_factors <- as.data.frame(cbind(factors, factor_levels))
+  }
+  
+  # Select column names in test data that are factor predictors in
+  # trained model
+  
+  predictors <- names(test_data[names(test_data) %in% factors])
+  
+  # For each factor predictor in your data, if the level is not in the model,
+  # set the value to NA
+  
+  for (i in 1:length(predictors)) {
+    found <- test_data[, predictors[i]] %in% model_factors[
+      model_factors$factors == predictors[i], ]$factor_levels
+    if (any(!found)) {
+      # track which variable
+      var <- predictors[i]
+      # set to NA
+      test_data[!found, predictors[i]] <- NA
+      # drop empty factor levels in test data
+      test_data %>%
+        droplevels() -> test_data
+      # issue warning to console
+      message(sprintf(paste0("Setting missing levels in '%s', only present",
+                             " in test data but missing in train data,",
+                             " to 'NA'."),
+                      var))
+    }
+  }
+  return(test_data)
+}
+## maybe put genre and key word in one col for each word
+
+## var to add : genres, plot_keywords,director_name,actor_2_name,actor_3_name,actor_1_name, country,content_rating
+
+model <- glm(nominee ~ duration+budget,family=binomial(link='logit'),data=train)
 
 
+summary(model)
+
+anova(model, test="Chisq")
+
+library(pscl)
+pR2(model)
 
 
+## now test the model 
 
 
+fitted.results <- predict(model,newdata = remove_missing_levels(fit = model, test_data = test),type='response')
+fitted.results <- ifelse(fitted.results > 0.5,1,0)
 
-
-
-
+misClasificError <- mean(fitted.results != test$nominee)
+print(paste('Accuracy',1-misClasificError))
+```
 
 
 
