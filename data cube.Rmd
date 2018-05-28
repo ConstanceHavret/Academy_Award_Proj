@@ -1,0 +1,54 @@
+---
+title: "data cube"
+author: "Antoine Fama"
+date: "26 mai 2018"
+output: html_document
+---
+
+
+```{r}
+library(rpivotTable)
+```
+
+
+```{r}
+cube <- df %>% select(Year, genres, country)
+
+genre <- str_split(cube$genres, "[|]")
+
+cube$genre1 <- sapply(genre, "[", 1)
+cube$genre2 <- sapply(genre, "[", 2)
+cube$genre3 <- sapply(genre, "[", 3)
+cube$genre4 <- sapply(genre, "[", 4)
+cube$genre5 <- sapply(genre, "[", 5)
+cube$genre6 <- sapply(genre, "[", 6)
+
+cube <- cube %>% select(-genres)
+```
+
+
+
+```{r}
+rpivotTable(cube, rows = "Year", cols = c("genre1", "country"), subtotals = TRUE)
+```
+
+
+
+```{r}
+df.dummy <- df %>% select(Year, genres, country)
+
+dummy.genre <- c("Drama", "Romance", "Biography", "Comedy", "Thriller", "History", "Adventure", "Crime", "War", "Action", "Music", "Fantasy", "Family", "Mystery", "Musical", "Sport", "Sci-Fi", "Western", "Horror", "Animation")
+
+df.dummy <- df.dummy %>% mutate(Drama = 0, Romance = 0, Biography = 0, Comedy = 0, Thriller = 0, History = 0, Adventure = 0, Crime = 0, War = 0, Action = 0, Music = 0, Fantasy = 0, Family = 0, Mystery = 0, Musical = 0, Sport = 0, "Sci-Fi" = 0, Western = 0, Horror = 0, Animation = 0)
+
+for (i in 1:length(dummy.genre)) {
+  genre_str <- dummy.genre[[i]]
+  
+  for (j in 1:length(df.dummy)) {
+    if(str_detect(df.dummy[j, 2], genre_str) == TRUE){
+      df.dummy[j, i + 3] <- 1
+    }
+  }
+}
+```
+
