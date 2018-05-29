@@ -351,38 +351,6 @@ scplot
 ## first use new data base and make a train and a test set
 
 ```{r}
-<<<<<<< HEAD
-=======
-
-set.seed(2)
-
-df <- df %>% mutate(nominee = 1)
-
-## add now the same number of row with movie that were not nominated so we have an homogenous dataset to make the train and test
-
-notindf <- subset(meta, !(movie_title %in% df$movie_title))
-
-notindf <- notindf[complete.cases(notindf),]
-
-notindf <- notindf[sample(nrow(notindf), 800), ]
-
-
-
-newdf <- bind_rows(df, notindf)
-
-newdf$nominee[is.na(newdf$nominee)] <- 0
-
-
-
-library(Amelia)
-missmap(newdf, main = "Missing values vs observed")
-
-
-newdf$budget[is.na(newdf$budget)] <- mean(newdf$budget,na.rm=T)
-
-newdf <- newdf[complete.cases(newdf$gross),]
-
->>>>>>> 21d6362a34ba2ff42c95baf8217adabf977f749b
 
 ## parse genre
 
@@ -404,7 +372,7 @@ for (i in 1:length(dummy.genre)) {
 }
 
 
-
+set.seed(2)
 
 missmap(newdf, main = "Missing values vs observed")
 
@@ -414,7 +382,7 @@ test <- subset(newdf, !(movie_title %in% train$movie_title))
 ```
 
 
-## now we can train test and score our model 
+##now we can train test and score our model 
 
 ## start with a logistice regression since we want to now if movie is nominated or not. 
 
