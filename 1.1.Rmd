@@ -96,6 +96,11 @@ df <- inner_join(best.pict, meta)
 
 ```
 
+
+
+
+
+
 ## Country nominated
 
 ```{r}
@@ -308,6 +313,29 @@ newdf$budget[is.na(newdf$budget)] <- mean(newdf$budget,na.rm=T)
 
 newdf <- newdf[complete.cases(newdf$gross),]
 
+
+## parse genre
+
+
+
+
+dummy.genre <- c("Drama", "Romance", "Biography", "Comedy", "Thriller", "History", "Adventure", "Crime", "War", "Action", "Music", "Fantasy", "Family", "Mystery", "Musical", "Sport", "Sci-Fi", "Western", "Horror", "Animation")
+
+newdf <- newdf %>% mutate(Drama = 0, Romance = 0, Biography = 0, Comedy = 0, Thriller = 0, History = 0, Adventure = 0, Crime = 0, War = 0, Action = 0, Music = 0, Fantasy = 0, Family = 0, Mystery = 0, Musical = 0, Sport = 0, "Sci-Fi" = 0, Western = 0, Horror = 0, Animation = 0)
+
+for (i in 1:length(dummy.genre)) {
+  genre_str <- dummy.genre[[i]]
+  
+  for (j in 1:length(newdf)) {
+    if(str_detect(newdf[j, 16], genre_str) == TRUE){
+      newdf[j, i + 34] <- 1
+    }
+  }
+}
+
+
+
+
 missmap(newdf, main = "Missing values vs observed")
 
 train <- newdf[sample(nrow(newdf), 800), ]
@@ -327,7 +355,7 @@ test <- subset(newdf, !(movie_title %in% train$movie_title))
 
 ## var to add : genres, plot_keywords,director_name,actor_2_name,actor_3_name,actor_1_name, country,content_rating
 ## add  : gross - budget , imdb_score, movie_facebook_likes, cast_total_facebook_likes
-model <- glm(nominee ~ duration+gross+budget+imdb_score+movie_facebook_likes+cast_total_facebook_likes,family=binomial(link='logit'),data=train)
+model <- glm(nominee ~Drama+Romance+Biography+Comedy+Thriller+History+Adventure+Crime+War+Action+Music+Fantasy+Family+Mystery+Musical+Sport+`Sci-Fi`+Western+Horror+Animation+ duration+gross+budget+imdb_score+movie_facebook_likes+cast_total_facebook_likes,family=binomial(link='logit'),data=train)
 
 
 
@@ -371,7 +399,7 @@ print(paste('Accuracy2',1-misClasificError2))
 
 
 ```{r}
-fit <- rpart(nominee ~ duration+gross+budget+imdb_score+movie_facebook_likes+cast_total_facebook_likes,
+fit <- rpart(nominee ~Drama+Romance+Biography+Comedy+Thriller+History+Adventure+Crime+War+Action+Music+Fantasy+Family+Mystery+Musical+Sport+`Sci-Fi`+Western+Horror+Animation+ duration+gross+budget+imdb_score+movie_facebook_likes+cast_total_facebook_likes,
   	method="class", data=train)
 printcp(fit)
 plotcp(fit)
