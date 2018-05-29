@@ -351,6 +351,38 @@ scplot
 ## first use new data base and make a train and a test set
 
 ```{r}
+<<<<<<< HEAD
+=======
+
+set.seed(2)
+
+df <- df %>% mutate(nominee = 1)
+
+## add now the same number of row with movie that were not nominated so we have an homogenous dataset to make the train and test
+
+notindf <- subset(meta, !(movie_title %in% df$movie_title))
+
+notindf <- notindf[complete.cases(notindf),]
+
+notindf <- notindf[sample(nrow(notindf), 800), ]
+
+
+
+newdf <- bind_rows(df, notindf)
+
+newdf$nominee[is.na(newdf$nominee)] <- 0
+
+
+
+library(Amelia)
+missmap(newdf, main = "Missing values vs observed")
+
+
+newdf$budget[is.na(newdf$budget)] <- mean(newdf$budget,na.rm=T)
+
+newdf <- newdf[complete.cases(newdf$gross),]
+
+>>>>>>> 21d6362a34ba2ff42c95baf8217adabf977f749b
 
 ## parse genre
 
@@ -389,7 +421,8 @@ test <- subset(newdf, !(movie_title %in% train$movie_title))
 ```{r}
 
 ## maybe put genre and key word in one col for each word
-
+library(broom)
+library(knitr)
 ## var to add : genres, plot_keywords,director_name,actor_2_name,actor_3_name,actor_1_name, country,content_rating
 ## add  : gross - budget , imdb_score, movie_facebook_likes, cast_total_facebook_likes
 model <- glm(nominee ~Drama+Romance+Biography+Comedy+Thriller+History+Adventure+Crime+War+Action+Music+Fantasy+Family+Mystery+Musical+Sport+`Sci-Fi`+Western+Horror+Animation+ duration+gross+budget+imdb_score+movie_facebook_likes+cast_total_facebook_likes,family=binomial(link='logit'),data=train)
@@ -397,7 +430,8 @@ model <- glm(nominee ~Drama+Romance+Biography+Comedy+Thriller+History+Adventure+
 
 
 summary(model)
-
+tidy(model) %>% kable()
+glance(model) %>% kable()
 anova(model, test="Chisq")
 
 library(pscl)
@@ -419,6 +453,8 @@ print(paste('Accuracy',1-misClasificError))
 
 model2 <- step(model)
 
+tidy(model2) %>% kable()
+glance(model2) %>% kable()
 summary(model2)
 
 anova(model2, test="Chisq")
@@ -428,6 +464,13 @@ fitted.results2 <- ifelse(fitted.results2 > 0.5,1,0)
 misClasificError2 <- mean(fitted.results2 != test$nominee)
 print(paste('Accuracy',1-misClasificError))
 print(paste('Accuracy2',1-misClasificError2))
+
+acc <- as.data.frame(c(1-misClasificError,1-misClasificError2))
+
+row.names(acc) <- c("model 1","model 2")
+
+kable(acc,col.names = c("accuracy"),row.names = TRUE)
+
 ```
 
 
