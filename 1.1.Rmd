@@ -63,7 +63,7 @@ TyrNomPlot =  ggplot(tyears)+ geom_point(aes(Year, Total), size = 4, color = 'gr
                 scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
                 scale_y_continuous(breaks = scales::pretty_breaks(n = 20)) +
                 labs(fill = "Nominations") + theme(legend.title = element_text(face = "bold", size = 14)) + 
-                theme(axis.text=element_text(size=14), axis.title=element_text(size=20,face="bold"))
+                theme(axis.text=element_text(size=14), axis.title=element_text(size=20,face="bold"), legend.position = "none")
 TyrNomPlot
 ```
 
@@ -97,21 +97,45 @@ df <- inner_join(best.pict, meta)
 ```
 
 
+```{r}
+df <- df %>% mutate(nominee = 1)
+
+## add now the same number of row with movie that were not nominated so we have an homogenous dataset to make the train and test
+
+notindf <- subset(meta, !(movie_title %in% df$movie_title))
+
+notindf <- notindf[complete.cases(notindf),]
+
+notindf <- notindf[sample(nrow(notindf), 800), ]
 
 
+
+newdf <- bind_rows(df, notindf)
+
+newdf$nominee[is.na(newdf$nominee)] <- 0
+
+
+
+library(Amelia)
+missmap(newdf, main = "Missing values vs observed")
+
+
+newdf$budget[is.na(newdf$budget)] <- mean(newdf$budget,na.rm=T)
+
+newdf <- newdf[complete.cases(newdf$gross),]
+
+```
 
 
 ## Country nominated
 
 ```{r}
-c <- df %>% group_by(country) %>% count() %>% arrange(desc(n))
-
-TreeAwCategs = hchart(c, "treemap", hcaes(x = country, value = n, color = n))%>%
-      hc_add_theme(hc_theme_google()) %>% hc_title(text = "Academy award categories and total nominations") %>%
-      hc_credits(enabled = TRUE, text = "Sources: Academy of Motion Picture Arts and Sciences", 
-                 style = list(fontSize = "12px"))
-
-TreeAwCategs
+df %>% mutate(country = fct_infreq(country)) %>% group_by(country) %>% 
+  ggplot(aes(x = country)) + 
+  geom_bar() +
+  labs(title = "Barplot of the nomination by country", x = "Country", y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.65), legend.position = "none") +
+  geom_text(data = df %>% group_by(country) %>% count(), aes(y = n, label = n, color = "red"), nudge_y = 10)
 ```
 
 ## duration
@@ -120,12 +144,12 @@ TreeAwCategs
 
 newdf %>% group_by(duration) %>% count() %>% arrange(desc(n))
 
-newdf %>% group_by(Winner) %>%
-  ggplot(aes(x = as.factor(nominee) , y = duration)) +
-  geom_boxplot() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.3, hjust = 1), plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+newdf %>%
+  ggplot(aes(x = as.factor(nominee) , y = duration, fill = as.factor(nominee))) +
+  geom_boxplot(varwidth = TRUE) +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.position = "none") +
   labs(title = "Duration for nominee or not",  x = "0 = Non nominee 1 = Nominee", y = "Duration (min)") +
-  scale_color_gradient(low = "green", high = "red")
+  scale_fill_manual(values = c("#E69F00", "#56B4E9"))
 
 ```
 
@@ -135,13 +159,53 @@ newdf %>% group_by(Winner) %>%
 
 newdf %>% group_by(budget) %>% count() %>% arrange(desc(n))
 
-newdf %>% group_by(Winner) %>%
-  ggplot(aes(x = as.factor(nominee) , y = budget)) +
-  geom_boxplot() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.3, hjust = 1), plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+newdf %>% filter(budget < 500000000) %>%
+  ggplot(aes(x = as.factor(nominee) , y = budget, fill = as.factor(nominee))) +
+  geom_boxplot(varwidth = TRUE) +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.position = "none") +
   labs(title = "Budget for nominee or not",  x = "0 = Non nominee 1 = Nominee", y = "Budget") +
-  scale_color_gradient(low = "green", high = "red")
+  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
+  scale_y_continuous(labels = scales::comma)
 ```
+
+
+
+## IMDB score
+
+```{r}
+newdf %>% 
+  ggplot(aes(x = as.factor(nominee) , y = imdb_score, fill = as.factor(nominee))) +
+  geom_violin() +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.position = "none") +
+  labs(title = "Imdb score for nominee or not",  x = "0 = Non nominee 1 = Nominee", y = "Imdb score") +
+  scale_fill_manual(values = c("#E69F00", "#56B4E9"))
+```
+
+
+##Facebook like
+
+```{r}
+newdf %>% 
+  ggplot(aes(x = as.factor(nominee) , y = movie_facebook_likes, fill = as.factor(nominee))) +
+  geom_boxplot(varwidth = TRUE) +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.position = "none") +
+  labs(title = "Number of facebook like for nominee or not",  x = "0 = Non nominee 1 = Nominee", y = "Number of facebook like") +
+  scale_fill_manual(values = c("#E69F00", "#56B4E9"))
+```
+
+##Gross
+
+```{r}
+newdf %>%
+  ggplot(aes(x = as.factor(nominee) , y = gross, fill = as.factor(nominee))) +
+  geom_boxplot(varwidth = TRUE) +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.position = "none") +
+  labs(title = "Revenue for nominee or not",  x = "0 = Non nominee 1 = Nominee", y = "Revenue") +
+  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
+  scale_y_continuous(labels = scales::comma)
+```
+
+
 
 ## PG rating
 
@@ -287,32 +351,6 @@ scplot
 ## first use new data base and make a train and a test set
 
 ```{r}
-df <- df %>% mutate(nominee = 1)
-
-## add now the same number of row with movie that were not nominated so we have an homogenous dataset to make the train and test
-
-notindf <- subset(meta, !(movie_title %in% df$movie_title))
-
-notindf <- notindf[complete.cases(notindf),]
-
-notindf <- notindf[sample(nrow(notindf), 800), ]
-
-
-
-newdf <- bind_rows(df, notindf)
-
-newdf$nominee[is.na(newdf$nominee)] <- 0
-
-
-
-library(Amelia)
-missmap(newdf, main = "Missing values vs observed")
-
-
-newdf$budget[is.na(newdf$budget)] <- mean(newdf$budget,na.rm=T)
-
-newdf <- newdf[complete.cases(newdf$gross),]
-
 
 ## parse genre
 
@@ -341,7 +379,6 @@ missmap(newdf, main = "Missing values vs observed")
 train <- newdf[sample(nrow(newdf), 800), ]
 
 test <- subset(newdf, !(movie_title %in% train$movie_title))
-
 ```
 
 
