@@ -1,0 +1,88 @@
+---
+title: "Course work"
+author: "Antoine Fama"
+date: "30 mai 2018"
+output: html_document
+---
+
+
+#Introduction
+
+- An introduction to the context or background of the topic
+- Research questions: what do we want to study?
+- Motivation, why did we do this; why this is important interesting
+- Introducing used new concepts/terminology (if needed)
+- Introducing the main ideas and used methodology
+- Briefly introduce the results
+
+
+#Data sources
+
+<!-- Give a detailed description of used data sources and analysis data sets in this section.   -->
+<!-- Tables can be used to list data items (name, description, data type, etc.) -->
+
+We will use....
+
+```{r dataimport, include=FALSE}
+database <- read_csv("database.csv")
+meta <- read_csv("movie_metadata.csv")
+```
+
+<!-- remove trailing spaces, special characters, duplicates -->
+```{r clean1, include=FALSE}
+mytrimfunction <- function (x) gsub("^\\s+|\\s+$", "", x)
+meta$movie_title <- mytrimfunction(meta$movie_title)
+meta$movie_title <- mytrimfunction(gsub("Â", "", meta$movie_title))
+meta <- meta[!duplicated(meta$movie_title),]
+meta$movie_title <- str_trim(meta$movie_title)
+```
+<!-- changing years from 1927/1928 to 1927 -->
+```{r clean2, include=FALSE}
+AwYear = data.table(database$Year)
+AwYear = cSplit(as.data.table(AwYear$V1), "V1", "/") 
+names(AwYear)[1] <- "Year"
+AwYear$V1_2 <- NULL
+database$Year = AwYear$Year
+```
+
+
+After some basic transformation, our two datasets look like:
+
+```{r}
+database %>% head(n = 1) %>% kable(format = "latex", booktabs = TRUE)
+```
+
+```{r}
+panderOptions('table.continues', '')
+pander(head(meta,n=10), split.cell = 140, split.table = 140)
+```
+
+
+
+
+#Data analysis
+
+##Descriptive analysis
+
+<!-- Simple summaries, graphs, etc. -->
+
+
+##Data cube
+
+<!-- A multidimensional cube (table) presentation of (a suitable part of) the data set. -->
+
+
+##Statistical/Data mining analysis
+
+<!-- Using at least two statistical / data mining methods to study the data. -->
+<!-- - Describing the methods -->
+<!-- - Explaining why the methods are suitable for this task -->
+<!-- - Illustrating and explaining the results using plots, tables and text. -->
+
+
+#Conclusion
+
+<!-- - Offer a brief summary of the study -->
+<!-- - Offer your conclusions/implications of the findings -->
+<!-- - How the results can could be applied in practice? (if suitable for the topic) -->
+<!-- - Describe the limitations of the study -->

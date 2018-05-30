@@ -1,0 +1,44 @@
+---
+title: "Main report"
+author: "Constance Havret, Antoine Fama and Julien Kleinmann"
+date: "30 mai 2018"
+output:
+  pdf_document: default
+  html_document: default
+toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(data.table)
+library(splitstackshape)
+library(ggrepel)
+library(highcharter)
+library(sqldf)
+library(formattable)
+library(gtools)
+library(rpart)
+library(flexclust)
+library(Amelia)
+library(rpivotTable)
+library(knitr)
+library(kableExtra)
+library(pander)
+```
+
+
+
+
+
+```{r child="Report_teacher.Rmd"}
+```
+
+\newpage
+
+```{r child="course_work.Rmd"}
+```
+

@@ -1,0 +1,37 @@
+---
+title: "Report for the teacher"
+author: "Antoine Fama"
+date: "30 mai 2018"
+output: html_document
+---
+
+
+
+#A Report to the teacher
+
+
+##Group and its member
+
+The members have the following roles and achievements:
+
+
+##Description of the project
+
+<!-- -	A brief technical description of tools and methods used. -->
+<!-- -	Why were those tools /methods selected? -->
+<!-- -	Did you try some other methods first? -->
+<!-- -	Describe challenges/difficulties during the project. -->
+<!-- -	Possible limitations of the project. -->
+<!-- -	What would have been done differently when thinking afterwards? -->
+
+
+##Analysis code
+
+Samples of the analysis code (R code, SQL queries) or a link where the code can be found.
+(link to repo then)
+
+
+##Explanation if some requierments where not fulfilled
+
+
+
